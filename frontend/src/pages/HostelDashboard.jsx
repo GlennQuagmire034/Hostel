@@ -108,9 +108,9 @@ const HostelDashboard = () => {
     const beds = []
 
     for (let i = 0; i < bedCount; i++) {
-      const isOccupied = i < occupants.length
+      const isOccupied = occupants.some(occ => occ.bedNumber === (i + 1))
       const color = isOccupied ? "#ff4d4f" : "#52c41a"
-      const occupant = occupants[i]
+      const occupant = occupants.find(occ => occ.bedNumber === (i + 1))
       const isClickable = room.status === "vacant"
 
       beds.push(
@@ -134,19 +134,19 @@ const HostelDashboard = () => {
           }}
           onClick={(e) => {
             e.stopPropagation();
-            if (isClickable) {
+            if (!isOccupied && room.status === "vacant") {
               console.log("Bed click handler called");
               handleBedClick(room, i);
             }
           }}
           onMouseEnter={(e) => {
-            if (isClickable) {
+            if (!isOccupied && room.status === "vacant") {
               e.target.style.transform = "scale(1.05)"
               e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)"
             }
           }}
           onMouseLeave={(e) => {
-            if (isClickable) {
+            if (!isOccupied && room.status === "vacant") {
               e.target.style.transform = "scale(1)"
               e.target.style.boxShadow = "none"
             }
@@ -164,7 +164,7 @@ const HostelDashboard = () => {
                   lineHeight: "1.2",
                 }}
               >
-                {occupant.name.split(" ")[0]}
+                {occupant.name ? occupant.name.split(" ")[0] : 'Occupied'}
               </Text>
               <Text
                 style={{
@@ -189,15 +189,17 @@ const HostelDashboard = () => {
               >
                 Bed {i + 1}
               </Text>
-              <Text
-                style={{
-                  color: isDarkMode ? "#b7eb8f" : "#52c41a",
-                  fontSize: "8px",
-                  display: "block",
-                }}
-              >
-                Click to Allot
-              </Text>
+              {room.status === "vacant" && (
+                <Text
+                  style={{
+                    color: isDarkMode ? "#b7eb8f" : "#52c41a",
+                    fontSize: "8px",
+                    display: "block",
+                  }}
+                >
+                  Click to Allot
+                </Text>
+              )}
             </div>
           )}
         </div>

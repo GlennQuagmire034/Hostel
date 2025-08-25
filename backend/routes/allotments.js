@@ -33,10 +33,11 @@ router.post('/allocate', async (req, res) => {
       });
     }
 
-    if (!room.isAvailable()) {
+    // Check if room is available and not blocked/store
+    if (!room.isAvailable() || room.status === 'blocked' || room.status === 'store') {
       return res.status(400).json({
         success: false,
-        message: 'Room is not available'
+        message: 'Room is not available or blocked'
       });
     }
 
@@ -52,6 +53,7 @@ router.post('/allocate', async (req, res) => {
     // Create new trainee
     const trainee = new Trainee({
       ...traineeData,
+      userId: req.user._id,
       roomNumber,
       block,
       bedNumber,

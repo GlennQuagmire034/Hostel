@@ -224,6 +224,11 @@ const Trainees = () => {
           <p style={{ marginBottom: "8px" }}>
             <strong>Status:</strong> {record.status}
           </p>
+          {record.checkOutDate && (
+            <p style={{ marginBottom: "8px" }}>
+              <strong>Check Out Date:</strong> {record.checkOutDate}
+            </p>
+          )}
           {record.emergencyContact && (
             <div>
               <p style={{ marginBottom: "8px", marginTop: "16px" }}>
@@ -241,6 +246,18 @@ const Trainees = () => {
               <p style={{ marginBottom: "4px", marginLeft: "16px" }}>
                 <strong>Place:</strong> {record.emergencyContact.place}
               </p>
+            </div>
+          )}
+          {record.amenities && Object.keys(record.amenities).length > 0 && (
+            <div>
+              <p style={{ marginBottom: "8px", marginTop: "16px" }}>
+                <strong>Allocated Amenities:</strong>
+              </p>
+              {Object.entries(record.amenities).map(([amenityName, amenityData]) => (
+                <p key={amenityName} style={{ marginBottom: "4px", marginLeft: "16px" }}>
+                  <strong>{amenityName}:</strong> {amenityData.quantity || 1}
+                </p>
+              ))}
             </div>
           )}
         </div>

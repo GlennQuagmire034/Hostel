@@ -4,7 +4,7 @@ import { useState, useContext } from "react"
 import { useNavigate } from "react-router-dom"
 import { AuthContext } from "../context/AuthContext"
 import { useTheme } from "../context/ThemeContext"
-import { Layout, Menu, Table, Input, Select, Typography, ConfigProvider, Dropdown, Button, Modal } from "antd"
+import { Layout, Menu, Table, Input, Select, Typography, ConfigProvider, Dropdown, Button, Modal, Form, InputNumber, message } from "antd"
 import {
   DashboardOutlined,
   HomeOutlined,
@@ -15,6 +15,8 @@ import {
   LogoutOutlined,
   UserSwitchOutlined,
   SearchOutlined,
+  PlusOutlined,
+  UndoOutlined,
 } from "@ant-design/icons"
 import ThemeToggle from "../components/ThemeToggle"
 import { useData } from "../context/DataContext"
@@ -29,7 +31,21 @@ const Amenities = () => {
   const navigate = useNavigate()
   const [selectedBlock, setSelectedBlock] = useState("A")
   const [searchText, setSearchText] = useState("")
-  const { getAllTrainees } = useData()
+  const [isReturnModalVisible, setIsReturnModalVisible] = useState(false)
+  const [isAllocateModalVisible, setIsAllocateModalVisible] = useState(false)
+  const [selectedTrainee, setSelectedTrainee] = useState(null)
+  const [returnForm] = Form.useForm()
+  const [allocateForm] = Form.useForm()
+  const { getAllTrainees, returnAmenities, allocateAmenities, amenitiesInventory } = useData()
+
+  const amenityOptions = [
+    'Bedsheet',
+    'Pillow Cover', 
+    'Blanket',
+    'Mosquito Repellant',
+    'Electric Kettle',
+    'Key Ring'
+  ]
 
   const handleBlockChange = (block) => {
     setSelectedBlock(block)
@@ -64,6 +80,44 @@ const Amenities = () => {
     return matchesSearch && matchesBlock && trainee.status === "staying"
   })
 
+  const handleReturnAmenities = (trainee) => {
+    setSelectedTrainee(trainee)
+    setIsReturnModalVisible(true)
+    returnForm.resetFields()
+  }
+
+  const handleAllocateAmenities = (trainee) => {
+    setSelectedTrainee(trainee)
+    setIsAllocateModalVisible(true)
+    allocateForm.resetFields()
+  }
+
+  const handleReturnSubmit = () => {
+    returnForm.validateFields().then((values) => {
+      const success = returnAmenities(selectedTrainee.id, values.amenityName, values.quantity)
+      if (success) {
+        message.success(`${values.quantity} ${values.amenityName}(s) returned successfully`)
+        setIsReturnModalVisible(false)
+        returnForm.resetFields()
+      } else {
+        message.error('Failed to return amenities')
+      }
+    })
+  }
+
+  const handleAllocateSubmit = () => {
+    allocateForm.validateFields().then((values) => {
+      const success = allocateAmenities(selectedTrainee.id, values.amenityName, values.quantity)
+      if (success) {
+        message.success(`${values.quantity} ${values.amenityName}(s) allocated successfully`)
+        setIsAllocateModalVisible(false)
+        allocateForm.resetFields()
+      } else {
+        message.error('Failed to allocate amenities. Check availability.')
+      }
+    })
+  }
+
   const columns = [
     {
       title: "NAME OF TRAINEE",
@@ -83,24 +137,56 @@ const Amenities = () => {
     {
       title: "ALLOTTED AMENITIES",
       key: "amenities",
-      width: 200,
+      width: 300,
       align: "center",
       render: (_, record) => (
-        <Button
-          type="primary"
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log("View amenities button clicked for:", record);
-            showAmenitiesModal(record);
-          }}
-          style={{
-            backgroundColor: "#1890ff",
-            borderColor: "#1890ff",
-          }}
-        >
-          View
-        </Button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <Button
+            type="primary"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("View amenities button clicked for:", record);
+              showAmenitiesModal(record);
+            }}
+            style={{
+              backgroundColor: "#1890ff",
+              borderColor: "#1890ff",
+            }}
+          >
+            View
+          </Button>
+          <Button
+            icon={<UndoOutlined />}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReturnAmenities(record);
+            }}
+            style={{
+              backgroundColor: "#faad14",
+              borderColor: "#faad14",
+              color: "white"
+            }}
+          >
+            Return
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAllocateAmenities(record);
+            }}
+            style={{
+              backgroundColor: "#52c41a",
+              borderColor: "#52c41a",
+              color: "white"
+            }}
+          >
+            Add
+          </Button>
+        </div>
       ),
     },
   ];
@@ -336,6 +422,78 @@ const Amenities = () => {
               }}
               scroll={{ x: 800 }}
             />
+
+            {/* Return Amenities Modal */}
+            <Modal
+              title={`Return Amenities - ${selectedTrainee?.name}`}
+              visible={isReturnModalVisible}
+              onOk={handleReturnSubmit}
+              onCancel={() => {
+                setIsReturnModalVisible(false)
+                returnForm.resetFields()
+              }}
+              okText="Return"
+              cancelText="Cancel"
+            >
+              <Form form={returnForm} layout="vertical">
+                <Form.Item
+                  name="amenityName"
+                  label="Amenity"
+                  rules={[{ required: true, message: 'Please select an amenity!' }]}
+                >
+                  <Select placeholder="Select amenity to return">
+                    {selectedTrainee?.amenities && Object.keys(selectedTrainee.amenities).map(amenityName => (
+                      <Option key={amenityName} value={amenityName}>
+                        {amenityName} (Available: {selectedTrainee.amenities[amenityName]?.quantity || 0})
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  name="quantity"
+                  label="Quantity"
+                  rules={[{ required: true, message: 'Please enter quantity!' }]}
+                >
+                  <InputNumber min={1} style={{ width: '100%' }} />
+                </Form.Item>
+              </Form>
+            </Modal>
+
+            {/* Allocate Amenities Modal */}
+            <Modal
+              title={`Allocate Amenities - ${selectedTrainee?.name}`}
+              visible={isAllocateModalVisible}
+              onOk={handleAllocateSubmit}
+              onCancel={() => {
+                setIsAllocateModalVisible(false)
+                allocateForm.resetFields()
+              }}
+              okText="Allocate"
+              cancelText="Cancel"
+            >
+              <Form form={allocateForm} layout="vertical">
+                <Form.Item
+                  name="amenityName"
+                  label="Amenity"
+                  rules={[{ required: true, message: 'Please select an amenity!' }]}
+                >
+                  <Select placeholder="Select amenity to allocate">
+                    {amenityOptions.map(amenityName => (
+                      <Option key={amenityName} value={amenityName}>
+                        {amenityName} (Available: {amenitiesInventory[amenityName]?.available || 0})
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  name="quantity"
+                  label="Quantity"
+                  rules={[{ required: true, message: 'Please enter quantity!' }]}
+                >
+                  <InputNumber min={1} style={{ width: '100%' }} />
+                </Form.Item>
+              </Form>
+            </Modal>
           </Content>
         </Layout>
       </Layout>

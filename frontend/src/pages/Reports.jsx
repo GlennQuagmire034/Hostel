@@ -27,58 +27,17 @@ const { Option } = Select
 const Reports = () => {
   const { logout, user } = useContext(AuthContext)
   const { isDarkMode, themeConfig } = useTheme()
-  const { linenInventory, blanketInventory, getOccupancyStats, getAllTrainees } = useData()
+  const { linenInventory, blanketInventory, amenitiesInventory, getOccupancyStats, getAllTrainees } = useData()
   const navigate = useNavigate()
   const [selectedMonth, setSelectedMonth] = useState("JANUARY")
   const [occupancyDateRange, setOccupancyDateRange] = useState(null);
 
   const occupancyStats = getOccupancyStats()
 
-  // Calculate pillow cover and bedsheet statistics from trainee amenities
-  const calculateLinenStats = () => {
-    const allTrainees = getAllTrainees()
-    
-    let totalPillowCovers = 150 // Base inventory
-    let availablePillowCovers = 60
-    let inUsePillowCovers = 0
-    let usedPillowCovers = 50
-
-    let totalBedsheets = 150 // Base inventory  
-    let availableBedsheets = 60
-    let inUseBedsheets = 0
-    let usedBedsheets = 50
-
-    // Count amenities from active trainees
-    allTrainees.forEach(trainee => {
-      if (trainee.status === 'staying' && trainee.amenities) {
-        if (trainee.amenities.pillowCover || trainee.amenities['Pillow Cover']) {
-          inUsePillowCovers++
-          availablePillowCovers = Math.max(0, availablePillowCovers - 1)
-        }
-        if (trainee.amenities.bedsheet || trainee.amenities['Bedsheet']) {
-          inUseBedsheets++
-          availableBedsheets = Math.max(0, availableBedsheets - 1)
-        }
-      }
-    })
-
-    return {
-      pillowCover: {
-        total: totalPillowCovers,
-        available: availablePillowCovers,
-        inUse: inUsePillowCovers,
-        used: usedPillowCovers
-      },
-      bedsheet: {
-        total: totalBedsheets,
-        available: availableBedsheets,
-        inUse: inUseBedsheets,
-        used: usedBedsheets
-      }
-    }
-  }
-
-  const linenStats = calculateLinenStats()
+  // Get amenities stats from context
+  const pillowCoverStats = amenitiesInventory['Pillow Cover'] || { total: 150, available: 150, inUse: 0, used: 0 }
+  const bedsheetStats = amenitiesInventory['Bedsheet'] || { total: 150, available: 150, inUse: 0, used: 0 }
+  const blanketStats = amenitiesInventory['Blanket'] || { total: 120, available: 120, inUse: 0, used: 0 }
 
   const occupancyData = [
     { name: "Occupied", value: occupancyStats.occupancyPercentage, color: "#ff4d4f" },
@@ -237,7 +196,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="TOTAL PILLOW COVERS"
-                      value={linenStats.pillowCover.total}
+                      value={pillowCoverStats.total}
                       valueStyle={{
                         color: isDarkMode ? "rgba(255, 255, 255, 0.85)" : "rgba(0, 0, 0, 0.88)",
                         fontSize: "32px",
@@ -256,7 +215,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="AVAILABLE PILLOW COVERS"
-                      value={linenStats.pillowCover.available}
+                      value={pillowCoverStats.available}
                       valueStyle={{
                         color: isDarkMode ? "#b7eb8f" : "#52c41a",
                         fontSize: "32px",
@@ -275,7 +234,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="IN-USE PILLOW COVERS"
-                      value={linenStats.pillowCover.inUse}
+                      value={pillowCoverStats.inUse}
                       valueStyle={{
                         color: isDarkMode ? "#fadb14" : "#faad14",
                         fontSize: "32px",
@@ -294,7 +253,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="USED PILLOW COVERS"
-                      value={linenStats.pillowCover.used}
+                      value={pillowCoverStats.used}
                       valueStyle={{
                         color: isDarkMode ? "#ffccc7" : "#ff4d4f",
                         fontSize: "32px",
@@ -329,7 +288,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="TOTAL BEDSHEETS"
-                      value={linenStats.bedsheet.total}
+                      value={bedsheetStats.total}
                       valueStyle={{
                         color: isDarkMode ? "rgba(255, 255, 255, 0.85)" : "rgba(0, 0, 0, 0.88)",
                         fontSize: "32px",
@@ -348,7 +307,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="AVAILABLE BEDSHEETS"
-                      value={linenStats.bedsheet.available}
+                      value={bedsheetStats.available}
                       valueStyle={{
                         color: isDarkMode ? "#b7eb8f" : "#52c41a",
                         fontSize: "32px",
@@ -367,7 +326,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="IN-USE BEDSHEETS"
-                      value={linenStats.bedsheet.inUse}
+                      value={bedsheetStats.inUse}
                       valueStyle={{
                         color: isDarkMode ? "#fadb14" : "#faad14",
                         fontSize: "32px",
@@ -386,7 +345,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="USED BEDSHEETS"
-                      value={linenStats.bedsheet.used}
+                      value={bedsheetStats.used}
                       valueStyle={{
                         color: isDarkMode ? "#ffccc7" : "#ff4d4f",
                         fontSize: "32px",
@@ -421,7 +380,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="TOTAL BLANKET"
-                      value={blanketInventory.totalBlanket}
+                      value={blanketStats.total}
                       valueStyle={{
                         color: isDarkMode ? "rgba(255, 255, 255, 0.85)" : "rgba(0, 0, 0, 0.88)",
                         fontSize: "32px",
@@ -440,7 +399,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="AVAILABLE BLANKET"
-                      value={blanketInventory.availableBlanket}
+                      value={blanketStats.available}
                       valueStyle={{
                         color: isDarkMode ? "#b7eb8f" : "#52c41a",
                         fontSize: "32px",
@@ -459,7 +418,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="IN-USE BLANKET"
-                      value={blanketInventory.inUseBlanket}
+                      value={blanketStats.inUse}
                       valueStyle={{
                         color: isDarkMode ? "#fadb14" : "#faad14",
                         fontSize: "32px",
@@ -478,7 +437,7 @@ const Reports = () => {
                   >
                     <Statistic
                       title="USED BLANKET"
-                      value={blanketInventory.usedBlanket}
+                      value={blanketStats.used}
                       valueStyle={{
                         color: isDarkMode ? "#ffccc7" : "#ff4d4f",
                         fontSize: "32px",

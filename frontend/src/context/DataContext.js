@@ -276,6 +276,94 @@ export const DataProvider = ({ children }) => {
     return true
   }
 
+  // Return amenities from trainee
+  const returnAmenities = (traineeId, amenityName, quantity) => {
+    const block = findTraineeBlock(traineeId)
+    if (!block) return false
+
+    const trainee = trainees[block].find((t) => t.id === traineeId)
+    if (!trainee || !trainee.amenities || !trainee.amenities[amenityName]) return false
+
+    // Update trainee's amenities
+    setTrainees((prev) => ({
+      ...prev,
+      [block]: prev[block].map((t) => {
+        if (t.id === traineeId) {
+          const updatedAmenities = { ...t.amenities }
+          if (updatedAmenities[amenityName]) {
+            updatedAmenities[amenityName].quantity = Math.max(0, updatedAmenities[amenityName].quantity - quantity)
+            if (updatedAmenities[amenityName].quantity === 0) {
+              delete updatedAmenities[amenityName]
+            }
+          }
+          return { ...t, amenities: updatedAmenities }
+        }
+        return t
+      })
+    }))
+
+    // Update amenities inventory
+    setAmenitiesInventory((prev) => {
+      const updated = { ...prev }
+      if (updated[amenityName]) {
+        updated[amenityName] = {
+          ...updated[amenityName],
+          inUse: Math.max(0, updated[amenityName].inUse - quantity),
+          used: updated[amenityName].used + quantity
+        }
+      }
+      return updated
+    })
+
+    return true
+  }
+
+  // Allocate new amenities to trainee
+  const allocateAmenities = (traineeId, amenityName, quantity) => {
+    const block = findTraineeBlock(traineeId)
+    if (!block) return false
+
+    const trainee = trainees[block].find((t) => t.id === traineeId)
+    if (!trainee) return false
+
+    // Check if amenity is available
+    if (!amenitiesInventory[amenityName] || amenitiesInventory[amenityName].available < quantity) {
+      return false
+    }
+
+    // Update trainee's amenities
+    setTrainees((prev) => ({
+      ...prev,
+      [block]: prev[block].map((t) => {
+        if (t.id === traineeId) {
+          const updatedAmenities = { ...t.amenities }
+          if (updatedAmenities[amenityName]) {
+            updatedAmenities[amenityName].quantity += quantity
+          } else {
+            updatedAmenities[amenityName] = { quantity, allocated: true }
+          }
+          return { ...t, amenities: updatedAmenities }
+        }
+        return t
+      })
+    }))
+
+    // Update amenities inventory
+    setAmenitiesInventory((prev) => {
+      const updated = { ...prev }
+      if (updated[amenityName]) {
+        updated[amenityName] = {
+          ...updated[amenityName],
+          available: updated[amenityName].available - quantity,
+          inUse: updated[amenityName].inUse + quantity
+        }
+      }
+      return updated
+    })
+
+    return true
+  }
+
   // Update trainee information
   const updateTrainee = (traineeId, updatedData) => {
     const block = findTraineeBlock(traineeId)
@@ -296,9 +384,12 @@ export const DataProvider = ({ children }) => {
       if (oldTrainee.roomNumber) {
         setRooms((prev) => ({
           ...prev,
-          [block]: prev[block].map((room) =>
-            room.number === oldTrainee.roomNumber ? { ...room, status: "vacant", trainee: null, id: null } : room,
-          ),
+          [block]: prev[block].map((room) => {
+            if (room.number === oldTrainee.roomNumber) {
+              return { ...room, status: "vacant", trainee: null, id: null, occupants: [] }
+            }
+            return room
+          }),
         }))
       }
 
@@ -306,17 +397,35 @@ export const DataProvider = ({ children }) => {
       const newBlock = findRoomBlock(updatedData.roomNumber)
       setRooms((prev) => ({
         ...prev,
-        [newBlock]: prev[newBlock].map((room) =>
-          room.number === updatedData.roomNumber
-            ? { ...room, status: "occupied", trainee: updatedData.name || oldTrainee.name, id: traineeId }
-            : room,
-        ),
+        [newBlock]: prev[newBlock].map((room) => {
+          if (room.number === updatedData.roomNumber) {
+            return { 
+              ...room, 
+              status: "occupied", 
+              trainee: updatedData.name || oldTrainee.name, 
+              id: traineeId,
+              occupants: [{ traineeId, bedNumber: 1, name: updatedData.name || oldTrainee.name }]
+            }
+          }
+          return room
+        }),
       }))
     } else if (updatedData.name && oldTrainee.status === "staying" && oldTrainee.roomNumber) {
       // Update trainee name in room data
       setRooms((prev) => ({
         ...prev,
-        [block]: prev[block].map((room) => (room.id === traineeId ? { ...room, trainee: updatedData.name } : room)),
+        [block]: prev[block].map((room) => {
+          if (room.id === traineeId) {
+            return { 
+              ...room, 
+              trainee: updatedData.name,
+              occupants: room.occupants.map(occ => 
+                occ.traineeId === traineeId ? { ...occ, name: updatedData.name } : occ
+              )
+            }
+          }
+          return room
+        }),
       }))
     }
 
@@ -401,6 +510,7 @@ export const DataProvider = ({ children }) => {
     rooms,
     linenInventory,
     blanketInventory,
+    amenitiesInventory,
     setTrainees,
     setRooms,
     getAllTrainees,
@@ -409,6 +519,8 @@ export const DataProvider = ({ children }) => {
     deallocateRoom,
     checkoutTrainee,
     updateTrainee,
+    returnAmenities,
+    allocateAmenities,
     addRoom,
     updateRoom,
     deleteRoom,
