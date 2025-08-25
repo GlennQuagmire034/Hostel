@@ -10,16 +10,26 @@ export const DataProvider = ({ children }) => {
   const [rooms, setRooms] = useState(initialRoomData)
   const [linenInventory, setLinenInventory] = useState({
     totalLinen: 150,
-    availableLinen: 60,
-    inUseLinen: 40,
-    usedLinen: 50,
+    availableLinen: 0,
+    inUseLinen: 0,
+    usedLinen: 0,
   })
 
   const [blanketInventory, setBlanketInventory] = useState({
     totalBlanket: 120,
-    availableBlanket: 45,
-    inUseBlanket: 35,
-    usedBlanket: 40,
+    availableBlanket: 0,
+    inUseBlanket: 0,
+    usedBlanket: 0,
+  })
+
+  // FIX: Add amenitiesInventory and setAmenitiesInventory state here
+  const [amenitiesInventory, setAmenitiesInventory] = useState({
+    'Bedsheet': { total: 150, available: 150, inUse: 0, used: 0 },
+    'Pillow Cover': { total: 150, available: 150, inUse: 0, used: 0 },
+    'Blanket': { total: 120, available: 120, inUse: 0, used: 0 },
+    'Mosquito Repellant': { total: 100, available: 100, inUse: 0, used: 0 },
+    'Electric Kettle': { total: 50, available: 50, inUse: 0, used: 0 },
+    'Key Ring': { total: 200, available: 200, inUse: 0, used: 0 },
   })
 
   // Get all trainees from current state (not static data)
@@ -505,12 +515,13 @@ export const DataProvider = ({ children }) => {
     setBlanketInventory((prev) => ({ ...prev, ...updates }))
   }
 
-  const value = {
+const value = {
     trainees,
     rooms,
     linenInventory,
     blanketInventory,
     amenitiesInventory,
+    setAmenitiesInventory, // FIX: Add this to context value
     setTrainees,
     setRooms,
     getAllTrainees,
