@@ -247,6 +247,8 @@ router.put('/:id', async (req, res) => {
           // Update old room status if no occupants left
           if (oldRoom.occupants.length === 0) {
             oldRoom.status = 'vacant';
+          } else if (oldRoom.occupants.length < oldRoom.beds && oldRoom.status === 'occupied') {
+            oldRoom.status = 'vacant';
           }
           await oldRoom.save();
         }
@@ -254,20 +256,45 @@ router.put('/:id', async (req, res) => {
 
       // Add to new room
       if (trainee.roomNumber && trainee.block) {
+        // Check if new room is available and not blocked
         const newRoom = await Room.findOne({
           number: trainee.roomNumber,
           block: trainee.block,
           userId: req.user._id
         });
 
-        if (newRoom) {
+        if (!newRoom) {
+          return res.status(400).json({
+            success: false,
+            message: 'New room not found'
+          });
+        }
+
+        if (['blocked', 'store', 'maintenance'].includes(newRoom.status)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot assign to blocked, store, or maintenance room'
+          });
+        }
+
+        if (newRoom.occupants.length >= newRoom.beds) {
+          return res.status(400).json({
+            success: false,
+            message: 'New room is fully occupied'
+          });
+        }
+
           newRoom.occupants.push({
             traineeId: trainee.traineeId,
             bedNumber: trainee.bedNumber
           });
-          newRoom.status = 'occupied';
+          
+          // Update room status based on occupancy
+          if (newRoom.occupants.length >= newRoom.beds) {
+            newRoom.status = 'occupied';
+          }
+          
           await newRoom.save();
-        }
       }
     } else if (req.body.name && trainee.status === "staying" && trainee.roomNumber) {
       // Update trainee name in room data
