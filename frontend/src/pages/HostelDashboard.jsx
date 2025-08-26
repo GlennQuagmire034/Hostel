@@ -39,7 +39,7 @@ const HostelDashboard = () => {
 
   const getBlockStats = (block) => {
     const blockRooms = rooms[block] || []
-    const blockTrainees = trainees[block] || []
+    const blockTrainees = trainees.filter(t => t.block === block && t.status === 'staying') || []
 
     return {
       name: `${block}-Wing`,
@@ -104,13 +104,18 @@ const HostelDashboard = () => {
     }
 
     const bedCount = room.beds || 1
-    const occupants = room.occupants || []
+    // Get actual occupants from trainees data
+    const roomOccupants = trainees.filter(t => 
+      t.roomNumber === room.number && 
+      t.block === room.block && 
+      t.status === 'staying'
+    )
     const beds = []
 
     for (let i = 0; i < bedCount; i++) {
-      const isOccupied = occupants.some(occ => occ.bedNumber === (i + 1))
+      const isOccupied = roomOccupants.some(occ => occ.bedNumber === (i + 1))
       const color = isOccupied ? "#ff4d4f" : "#52c41a"
-      const occupant = occupants.find(occ => occ.bedNumber === (i + 1))
+      const occupant = roomOccupants.find(occ => occ.bedNumber === (i + 1))
       const isClickable = room.status === "vacant"
 
       beds.push(
@@ -189,7 +194,7 @@ const HostelDashboard = () => {
               >
                 Bed {i + 1}
               </Text>
-              {room.status === "vacant" && (
+              {!isOccupied && room.status === "vacant" && (
                 <Text
                   style={{
                     color: isDarkMode ? "#b7eb8f" : "#52c41a",

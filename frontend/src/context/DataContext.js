@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react"
 import { message } from "antd"
+import { AuthContext } from "./AuthContext"
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -97,9 +98,13 @@ export const DataProvider = ({ children }) => {
   // Calculate occupancy statistics
   const getOccupancyStats = () => {
     const allRooms = [...rooms.A, ...rooms.B, ...rooms.C]
-    const totalRooms = allRooms.length
-    const occupiedRooms = allRooms.filter((room) => room.status === "occupied").length
-    const vacantRooms = allRooms.filter((room) => room.status === "vacant").length
+    // Only count rooms that can be occupied (exclude blocked, store, etc.)
+    const occupiableRooms = allRooms.filter(room => 
+      !['blocked', 'store', 'maintenance'].includes(room.status)
+    )
+    const totalRooms = occupiableRooms.length
+    const occupiedRooms = occupiableRooms.filter((room) => room.status === "occupied").length
+    const vacantRooms = occupiableRooms.filter((room) => room.status === "vacant").length
 
     return {
       total: totalRooms,
@@ -311,6 +316,90 @@ export const DataProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  // Add room function
+  const addRoom = async (roomData, block) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/rooms`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          ...roomData,
+          block
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchRooms();
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error('Error adding room:', error);
+      message.error(error.message || 'Failed to add room');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Update room function
+  const updateRoom = async (roomNumber, block, updateData) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/rooms/${block}/${roomNumber}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updateData)
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchRooms();
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error('Error updating room:', error);
+      message.error(error.message || 'Failed to update room');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Delete room function
+  const deleteRoom = async (roomNumber, block) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/rooms/${block}/${roomNumber}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+  }
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchRooms();
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      message.error(error.message || 'Failed to delete room');
+      return false;
+    } finally {
+      setLoading(false);
+    }
   }
 
   const value = {
@@ -328,6 +417,9 @@ export const DataProvider = ({ children }) => {
     fetchTrainees,
     fetchRooms,
     fetchAmenities,
+    addRoom,
+    updateRoom,
+    deleteRoom,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider } from "./context/AuthContext"
 import { ThemeProvider } from "./context/ThemeContext"
-import { DataProvider } from "./context/DataContext"
 import ProtectedRoute from "./components/ProtectedRoute"
 import HostelDashboard from "./pages/HostelDashboard"
 import Allotments from "./pages/Allotments"
@@ -12,74 +11,85 @@ import Rooms from "./pages/Rooms"
 import Amenities from "./pages/Amenities"
 import Reports from "./pages/Reports"
 import NotFound from "./pages/NotFound"
+import { DataProvider } from "./context/DataContext"
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <DataProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-              {/* Protected routes */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
+            {/* Protected routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DataProvider>
                     <HostelDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/allotments"
-                element={
-                  <ProtectedRoute>
+                  </DataProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/allotments"
+              element={
+                <ProtectedRoute>
+                  <DataProvider>
                     <Allotments />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/trainees"
-                element={
-                  <ProtectedRoute>
+                  </DataProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/trainees"
+              element={
+                <ProtectedRoute>
+                  <DataProvider>
                     <Trainees />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rooms"
-                element={
-                  <ProtectedRoute>
+                  </DataProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/rooms"
+              element={
+                <ProtectedRoute>
+                  <DataProvider>
                     <Rooms />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/amenities"
-                element={
-                  <ProtectedRoute>
+                  </DataProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/amenities"
+              element={
+                <ProtectedRoute>
+                  <DataProvider>
                     <Amenities />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute>
+                  </DataProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <DataProvider>
                     <Reports />
-                  </ProtectedRoute>
-                }
-              />
+                  </DataProvider>
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Fallback routes */}
-              <Route path="/404" element={<NotFound />} />
-              <Route path="*" element={<Navigate to="/404" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </DataProvider>
+            {/* Fallback routes */}
+            <Route path="/404" element={<NotFound />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
+          </Routes>
+        </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
   )

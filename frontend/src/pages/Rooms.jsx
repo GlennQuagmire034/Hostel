@@ -62,7 +62,6 @@ const Rooms = () => {
   }
 
   const handleAddRoom = () => {
-    console.log("Add room button clicked")
     setIsModalVisible(true)
     setEditingRoom(null)
     form.resetFields()
@@ -82,7 +81,6 @@ const Rooms = () => {
   }
 
   const handleDeleteRoom = (record) => {
-    console.log("Delete room clicked for:", record)
 
     // Check if room is occupied
     const occupants = getRoomOccupants(record.number);
@@ -98,25 +96,17 @@ const Rooms = () => {
       okType: "danger",
       cancelText: "No",
       onOk() {
-        console.log("Confirming delete for room:", record.number, "in block:", selectedBlock)
 
-        const success = deleteRoom(record.number, selectedBlock)
-        if (success) {
-          message.success(`Room ${record.number} has been deleted successfully`)
-        } else {
-          message.error("Failed to delete room")
-        }
+        deleteRoom(record.number, selectedBlock);
       },
     })
   }
 
   const handleModalOk = () => {
-    console.log("Modal OK clicked")
 
     form
       .validateFields()
       .then((values) => {
-        console.log("Form values:", values)
 
         const targetBlock = values.block || selectedBlock
 
@@ -127,39 +117,29 @@ const Rooms = () => {
             type: values.type,
           }
 
-          const success = updateRoom(editingRoom.number, selectedBlock, updatedData)
-          if (success) {
-            message.success("Room updated successfully")
-          } else {
-            message.error("Failed to update room")
-          }
+          updateRoom(editingRoom.number, selectedBlock, updatedData);
         } else {
           // Add new room
           const newRoomData = {
             number: Number.parseInt(values.number),
             status: values.status,
             type: values.type,
+            beds: getBedCountFromType(values.type)
           }
 
-          console.log("Adding new room:", newRoomData, "to block:", targetBlock)
 
           // Check if room number already exists in the target block
-          const existingRoom = contextRooms[targetBlock].find((room) => room.number === newRoomData.number)
+          const existingRoom = rooms[targetBlock].find((room) => room.number === newRoomData.number)
           if (existingRoom) {
             message.error("Room number already exists in this block!")
             return
           }
 
-          const success = addRoom(newRoomData, targetBlock)
-          if (success) {
-            message.success("Room added successfully")
-            // If we added to a different block, switch to that block
-            if (targetBlock !== selectedBlock) {
+          addRoom(newRoomData, targetBlock).then(success => {
+            if (success && targetBlock !== selectedBlock) {
               setSelectedBlock(targetBlock)
             }
-          } else {
-            message.error("Failed to add room")
-          }
+          });
         }
 
         setIsModalVisible(false)
@@ -170,6 +150,12 @@ const Rooms = () => {
         console.log("Validate Failed:", info)
       })
   }
+
+  // Helper function to get bed count from room type
+  const getBedCountFromType = (type) => {
+    switch (type) {
+      case 'Single':
+        return 1;
 
   const handleModalCancel = () => {
     setIsModalVisible(false)
@@ -194,8 +180,7 @@ const Rooms = () => {
 
   // Get occupants for a room
   const getRoomOccupants = (roomNumber) => {
-    const blockTrainees = trainees[selectedBlock] || []
-    return blockTrainees.filter(trainee => 
+    return trainees.filter(trainee => 
       trainee.roomNumber === roomNumber && trainee.status === "staying"
     )
   }

@@ -207,6 +207,40 @@ router.post('/', validate(traineeSchema), async (req, res) => {
 // Update trainee
 router.put('/:id', async (req, res) => {
   try {
+    const updateData = req.body;
+    
+    // If room assignment is being changed, validate the new room
+    if (updateData.roomNumber && updateData.block) {
+      const newRoom = await Room.findOne({
+        number: updateData.roomNumber,
+        block: updateData.block,
+        userId: req.user._id
+      });
+
+      if (!newRoom) {
+        return res.status(400).json({
+          success: false,
+          message: 'Room not found'
+        });
+      }
+
+      // Check if room is blocked, store, or maintenance
+      if (['blocked', 'store', 'maintenance'].includes(newRoom.status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot assign to blocked, store, or maintenance room'
+        });
+      }
+
+      // Check if room has available beds
+      if (newRoom.occupants.length >= newRoom.beds) {
+        return res.status(400).json({
+          success: false,
+          message: 'Room is fully occupied'
+        });
+      }
+    }
+
     const trainee = await Trainee.findOne({
       userId: req.user._id,
       $or: [
@@ -224,13 +258,14 @@ router.put('/:id', async (req, res) => {
 
     const oldRoomNumber = trainee.roomNumber;
     const oldBlock = trainee.block;
+    const oldBedNumber = trainee.bedNumber;
 
     // Update trainee data
-    Object.assign(trainee, req.body);
+    Object.assign(trainee, updateData);
     await trainee.save();
 
     // Handle room change
-    if (oldRoomNumber !== trainee.roomNumber || oldBlock !== trainee.block) {
+    if (oldRoomNumber !== trainee.roomNumber || oldBlock !== trainee.block || oldBedNumber !== trainee.bedNumber) {
       // Remove from old room
       if (oldRoomNumber && oldBlock) {
         const oldRoom = await Room.findOne({
@@ -247,8 +282,6 @@ router.put('/:id', async (req, res) => {
           // Update old room status if no occupants left
           if (oldRoom.occupants.length === 0) {
             oldRoom.status = 'vacant';
-          } else if (oldRoom.occupants.length < oldRoom.beds && oldRoom.status === 'occupied') {
-            oldRoom.status = 'vacant';
           }
           await oldRoom.save();
         }
@@ -256,34 +289,13 @@ router.put('/:id', async (req, res) => {
 
       // Add to new room
       if (trainee.roomNumber && trainee.block) {
-        // Check if new room is available and not blocked
         const newRoom = await Room.findOne({
           number: trainee.roomNumber,
           block: trainee.block,
           userId: req.user._id
         });
 
-        if (!newRoom) {
-          return res.status(400).json({
-            success: false,
-            message: 'New room not found'
-          });
-        }
-
-        if (['blocked', 'store', 'maintenance'].includes(newRoom.status)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Cannot assign to blocked, store, or maintenance room'
-          });
-        }
-
-        if (newRoom.occupants.length >= newRoom.beds) {
-          return res.status(400).json({
-            success: false,
-            message: 'New room is fully occupied'
-          });
-        }
-
+        if (newRoom) {
           newRoom.occupants.push({
             traineeId: trainee.traineeId,
             bedNumber: trainee.bedNumber
@@ -295,22 +307,6 @@ router.put('/:id', async (req, res) => {
           }
           
           await newRoom.save();
-      }
-    } else if (req.body.name && trainee.status === "staying" && trainee.roomNumber) {
-      // Update trainee name in room data
-      const room = await Room.findOne({
-        number: trainee.roomNumber,
-        block: trainee.block,
-        userId: req.user._id
-      });
-
-      if (room) {
-        const occupantIndex = room.occupants.findIndex(
-          occupant => occupant.traineeId === trainee.traineeId
-        );
-        if (occupantIndex !== -1) {
-          // Update the occupant info if needed
-          await room.save();
         }
       }
     }

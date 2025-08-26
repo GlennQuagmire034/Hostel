@@ -34,10 +34,17 @@ router.post('/allocate', async (req, res) => {
     }
 
     // Check if room is available and not blocked/store
-    if (!room.isAvailable() || ['blocked', 'store', 'maintenance'].includes(room.status)) {
+    if (['blocked', 'store', 'maintenance'].includes(room.status)) {
       return res.status(400).json({
         success: false,
-        message: 'Room is not available, blocked, or under maintenance'
+        message: 'Cannot allocate blocked, store, or maintenance room'
+      });
+    }
+
+    if (!room.isAvailable()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Room is fully occupied'
       });
     }
 

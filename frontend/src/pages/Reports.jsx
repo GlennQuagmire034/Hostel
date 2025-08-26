@@ -27,7 +27,7 @@ const { Option } = Select
 const Reports = () => {
   const { logout, user } = useContext(AuthContext)
   const { isDarkMode, themeConfig } = useTheme()
-  const { linenInventory, blanketInventory, amenitiesInventory, getOccupancyStats, getAllTrainees } = useData()
+  const { amenitiesInventory, getOccupancyStats, getAllTrainees } = useData()
   const navigate = useNavigate()
   const [selectedMonth, setSelectedMonth] = useState("JANUARY")
   const [occupancyDateRange, setOccupancyDateRange] = useState(null);
@@ -40,8 +40,8 @@ const Reports = () => {
   const blanketStats = amenitiesInventory['Blanket'] || { total: 120, available: 120, inUse: 0, used: 0 }
 
   const occupancyData = [
-    { name: "Occupied", value: occupancyStats.occupancyPercentage, color: "#ff4d4f" },
-    { name: "Vacant", value: occupancyStats.vacancyPercentage, color: "#52c41a" },
+    { name: "Occupied", value: occupancyStats.occupancyPercentage || 0, color: "#ff4d4f" },
+    { name: "Vacant", value: 100 - (occupancyStats.occupancyPercentage || 0), color: "#52c41a" },
   ]
 
   const userMenu = (
