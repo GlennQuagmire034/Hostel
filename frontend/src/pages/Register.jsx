@@ -1,6 +1,7 @@
-import { useState, useContext } from "react"
+"use client"
+
+import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { AuthContext } from "../context/AuthContext"
 import { useTheme } from "../context/ThemeContext"
 import { Form, Input, Button, Card, Typography, ConfigProvider, message } from "antd"
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons"
@@ -10,26 +11,38 @@ const { Title, Text } = Typography
 const Register = () => {
   const [loading, setLoading] = useState(false)
   const { isDarkMode, themeConfig } = useTheme()
-  const { register } = useContext(AuthContext)
   const navigate = useNavigate()
+  const [existingUsers] = useState(["admin", "user1", "manager"]) // Mock existing users
 
   const onFinish = async (values) => {
     setLoading(true)
 
-    const success = await register({
-      username: values.username,
-      email: values.email,
-      password: values.password,
-      fullName: values.fullName
-    })
-    
-    if (success) {
+    // Check if user already exists
+    if (existingUsers.includes(values.username.toLowerCase())) {
+      message.error("User already exists! Redirecting to login page...")
+      setTimeout(() => {
+        navigate("/login")
+      }, 2000)
+      setLoading(false)
+      return
+    }
+
+    // Simulate API call for registration
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Add user to existing users (in real app, this would be API call)
+      existingUsers.push(values.username.toLowerCase())
+
+      message.success("Registration successful! Please login with your credentials.")
       setTimeout(() => {
         navigate("/login")
       }, 1500)
+    } catch (error) {
+      message.error("Registration failed. Please try again.")
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (

@@ -139,12 +139,17 @@ const Trainees = () => {
             division: values.division,
             mobile: values.mobile,
             roomNumber: values.roomNumber ? Number.parseInt(values.roomNumber) : null,
-            checkInDate: values.from,
-            expectedCheckOutDate: values.to,
+            from: values.from,
+            to: values.to,
           }
 
-          const traineeId = editingTrainee.traineeId || editingTrainee._id || editingTrainee.id;
-          updateTrainee(traineeId, updatedData);
+          const success = updateTrainee(editingTrainee.id, updatedData)
+          if (success) {
+            message.success("Trainee updated successfully")
+          } else {
+            message.error("Failed to update trainee")
+            return
+          }
         } else {
           // Add new trainee
           const newTrainee = {
@@ -152,10 +157,9 @@ const Trainees = () => {
             designation: values.designation,
             division: values.division,
             mobile: values.mobile,
-            checkInDate: new Date(),
-            expectedCheckOutDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+            from: values.from,
+            to: values.to,
             status: "staying",
-            roomNumber: values.roomNumber ? Number.parseInt(values.roomNumber) : null,
           }
 
           // Add to the appropriate block based on room number
@@ -163,7 +167,13 @@ const Trainees = () => {
           if (values.roomNumber >= 44 && values.roomNumber <= 86) targetBlock = "B"
           else if (values.roomNumber >= 87 && values.roomNumber <= 114) targetBlock = "C"
 
-          allocateRoom(newTrainee, values.roomNumber, targetBlock);
+          try {
+            allocateRoom(newTrainee, values.roomNumber, targetBlock)
+            message.success("Trainee added successfully")
+          } catch (error) {
+            message.error("Failed to add trainee. Room might not be available.")
+            return
+          }
         }
 
         setIsModalVisible(false)
@@ -182,12 +192,13 @@ const Trainees = () => {
   }
 
   const handleViewTrainee = (record) => {
+    console.log("View trainee clicked:", record);
     Modal.info({
       title: `Trainee Details - ${record.name}`,
       content: (
         <div style={{ padding: "16px 0" }}>
           <p style={{ marginBottom: "8px" }}>
-            <strong>ID:</strong> {record.traineeId || record.id}
+            <strong>ID:</strong> {record.id}
           </p>
           <p style={{ marginBottom: "8px" }}>
             <strong>Name:</strong> {record.name}
@@ -204,28 +215,18 @@ const Trainees = () => {
           <p style={{ marginBottom: "8px" }}>
             <strong>Room Number:</strong> {record.roomNumber || "N/A"}
           </p>
-          {record.bedNumber && (
-            <p style={{ marginBottom: "8px" }}>
-              <strong>Bed Number:</strong> {record.bedNumber}
-            </p>
-          )}
           <p style={{ marginBottom: "8px" }}>
-            <strong>Check In:</strong> {record.checkInDate ? new Date(record.checkInDate).toLocaleDateString() : record.from}
+            <strong>From:</strong> {record.from}
           </p>
           <p style={{ marginBottom: "8px" }}>
-            <strong>Expected Check Out:</strong> {record.expectedCheckOutDate ? new Date(record.expectedCheckOutDate).toLocaleDateString() : record.to}
+            <strong>To:</strong> {record.to}
           </p>
           <p style={{ marginBottom: "8px" }}>
             <strong>Status:</strong> {record.status}
           </p>
           {record.checkOutDate && (
             <p style={{ marginBottom: "8px" }}>
-              <strong>Check Out Date:</strong> {new Date(record.checkOutDate).toLocaleDateString()}
-            </p>
-          )}
-          {record.trainingUnder && (
-            <p style={{ marginBottom: "8px" }}>
-              <strong>Training Under:</strong> {record.trainingUnder}
+              <strong>Check Out Date:</strong> {record.checkOutDate}
             </p>
           )}
           {record.emergencyContact && (
@@ -252,9 +253,9 @@ const Trainees = () => {
               <p style={{ marginBottom: "8px", marginTop: "16px" }}>
                 <strong>Allocated Amenities:</strong>
               </p>
-              {record.amenities.map((amenity, index) => (
-                <p key={index} style={{ marginBottom: "4px", marginLeft: "16px" }}>
-                  <strong>{amenity.name}:</strong> {amenity.quantity || 1}
+              {Object.entries(record.amenities).map(([amenityName, amenityData]) => (
+                <p key={amenityName} style={{ marginBottom: "4px", marginLeft: "16px" }}>
+                  <strong>{amenityName}:</strong> {amenityData.quantity || 1}
                 </p>
               ))}
             </div>
@@ -274,14 +275,15 @@ const Trainees = () => {
       division: record.division,
       mobile: record.mobile,
       roomNumber: record.roomNumber,
-      from: record.checkInDate ? new Date(record.checkInDate).toLocaleDateString('en-GB') : record.from,
-      to: record.expectedCheckOutDate ? new Date(record.expectedCheckOutDate).toLocaleDateString('en-GB') : record.to,
+      from: record.from,
+      to: record.to,
     })
     setEditingTrainee(record)
     setIsModalVisible(true)
   }
 
   const handleCheckoutTrainee = (record) => {
+    console.log("Checkout button clicked for:", record)
 
     if (record.status !== "staying") {
       message.warning("Only staying trainees can be checked out");
@@ -303,9 +305,14 @@ const Trainees = () => {
       cancelText: "Cancel",
       centered: true,
       onOk() {
-        const traineeId = record.traineeId || record._id || record.id;
+        console.log("Confirming checkout for:", record.id)
 
-        checkoutTrainee(traineeId);
+        const success = checkoutTrainee(record.id)
+        if (success) {
+          message.success(`${record.name} has been checked out successfully`)
+        } else {
+          message.error("Failed to checkout trainee. Please try again.")
+        }
       },
     })
   }
@@ -341,24 +348,12 @@ const Trainees = () => {
       dataIndex: "from",
       key: "from",
       sorter: (a, b) => new Date(a.from) - new Date(b.from),
-      render: (_, record) => {
-        if (record.checkInDate) {
-          return new Date(record.checkInDate).toLocaleDateString('en-GB');
-        }
-        return record.from || 'N/A';
-      }
     },
     {
       title: "TO",
       dataIndex: "to",
       key: "to",
       sorter: (a, b) => new Date(a.to) - new Date(b.to),
-      render: (_, record) => {
-        if (record.expectedCheckOutDate) {
-          return new Date(record.expectedCheckOutDate).toLocaleDateString('en-GB');
-        }
-        return record.to || 'N/A';
-      }
     },
     {
       title: "MOBILE NO.",
@@ -384,6 +379,7 @@ const Trainees = () => {
             size="small"
             onClick={(e) => {
               e.stopPropagation()
+              console.log("View button clicked for:", record);
               handleViewTrainee(record)
             }}
           >
@@ -394,6 +390,7 @@ const Trainees = () => {
             size="small"
             onClick={(e) => {
               e.stopPropagation()
+              console.log("Edit button clicked for:", record);
               handleEditTrainee(record)
             }}
           >
@@ -406,6 +403,7 @@ const Trainees = () => {
               size="small"
               onClick={(e) => {
                 e.stopPropagation()
+                console.log("Checkout button clicked for:", record);
                 handleCheckoutTrainee(record)
               }}
             >

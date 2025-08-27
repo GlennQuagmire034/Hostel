@@ -34,17 +34,10 @@ router.post('/allocate', async (req, res) => {
     }
 
     // Check if room is available and not blocked/store
-    if (['blocked', 'store', 'maintenance'].includes(room.status)) {
+    if (!room.isAvailable() || room.status === 'blocked' || room.status === 'store') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot allocate blocked, store, or maintenance room'
-      });
-    }
-
-    if (!room.isAvailable()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Room is fully occupied'
+        message: 'Room is not available or blocked'
       });
     }
 
@@ -76,12 +69,7 @@ router.post('/allocate', async (req, res) => {
       traineeId: trainee.traineeId,
       bedNumber: bedNumber
     });
-    
-    // Update room status based on occupancy
-    if (room.occupants.length >= room.beds) {
-      room.status = 'occupied';
-    }
-    
+    room.status = 'occupied';
     await room.save();
 
     // Handle amenity allocation

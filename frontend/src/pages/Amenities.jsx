@@ -94,25 +94,27 @@ const Amenities = () => {
 
   const handleReturnSubmit = () => {
     returnForm.validateFields().then((values) => {
-      const traineeId = selectedTrainee.traineeId || selectedTrainee._id || selectedTrainee.id;
-      returnAmenities(traineeId, values.amenityName, values.quantity).then(success => {
-        if (success) {
-          setIsReturnModalVisible(false)
-          returnForm.resetFields()
-        }
-      });
+      const success = returnAmenities(selectedTrainee.id, values.amenityName, values.quantity)
+      if (success) {
+        message.success(`${values.quantity} ${values.amenityName}(s) returned successfully`)
+        setIsReturnModalVisible(false)
+        returnForm.resetFields()
+      } else {
+        message.error('Failed to return amenities')
+      }
     })
   }
 
   const handleAllocateSubmit = () => {
     allocateForm.validateFields().then((values) => {
-      const traineeId = selectedTrainee.traineeId || selectedTrainee._id || selectedTrainee.id;
-      allocateAmenities(traineeId, values.amenityName, values.quantity).then(success => {
-        if (success) {
-          setIsAllocateModalVisible(false)
-          allocateForm.resetFields()
-        }
-      });
+      const success = allocateAmenities(selectedTrainee.id, values.amenityName, values.quantity)
+      if (success) {
+        message.success(`${values.quantity} ${values.amenityName}(s) allocated successfully`)
+        setIsAllocateModalVisible(false)
+        allocateForm.resetFields()
+      } else {
+        message.error('Failed to allocate amenities. Check availability.')
+      }
     })
   }
 
@@ -144,6 +146,7 @@ const Amenities = () => {
             size="small"
             onClick={(e) => {
               e.stopPropagation();
+              console.log("View amenities button clicked for:", record);
               showAmenitiesModal(record);
             }}
             style={{
@@ -181,7 +184,7 @@ const Amenities = () => {
               color: "white"
             }}
           >
-            New
+            Add
           </Button>
         </div>
       ),
@@ -189,20 +192,11 @@ const Amenities = () => {
   ];
 
   const showAmenitiesModal = (trainee) => {
+    console.log("View amenities clicked for:", trainee);
     const amenitiesList = [];
     
-    // Check amenities array
-    if (trainee.amenities && Array.isArray(trainee.amenities)) {
-      trainee.amenities.forEach(amenity => {
-        if (amenity.allocated !== false) {
-          amenitiesList.push({
-            name: amenity.name,
-            quantity: amenity.quantity || 1
-          });
-        }
-      });
-    } else if (trainee.amenities && typeof trainee.amenities === 'object') {
-      // Handle object format
+    // Check all possible amenities from the trainee's amenities object
+    if (trainee.amenities) {
       Object.entries(trainee.amenities).forEach(([amenityName, amenityData]) => {
         if (amenityData && (amenityData.allocated || amenityData === true)) {
           const quantity = amenityData.quantity || 1;
@@ -214,6 +208,19 @@ const Amenities = () => {
       });
     }
 
+    // Also check for legacy boolean amenities
+    const legacyAmenities = ['linen', 'table', 'chair', 'blanket', 'bed'];
+    legacyAmenities.forEach(amenity => {
+      if (trainee.amenities && trainee.amenities[amenity] === true) {
+        // Check if not already added
+        if (!amenitiesList.find(item => item.name.toLowerCase() === amenity.toLowerCase())) {
+          amenitiesList.push({ 
+            name: amenity.charAt(0).toUpperCase() + amenity.slice(1), 
+            quantity: 1 
+          });
+        }
+      }
+    });
 
     Modal.info({
       title: `Allotted Amenities - ${trainee.name}`,
@@ -435,10 +442,9 @@ const Amenities = () => {
                   rules={[{ required: true, message: 'Please select an amenity!' }]}
                 >
                   <Select placeholder="Select amenity to return">
-                    {selectedTrainee?.amenities && Array.isArray(selectedTrainee.amenities) && 
-                      selectedTrainee.amenities.filter(a => a.allocated !== false).map((amenity, index) => (
-                      <Option key={index} value={amenity.name}>
-                        {amenity.name} (Available: {amenity.quantity || 0})
+                    {selectedTrainee?.amenities && Object.keys(selectedTrainee.amenities).map(amenityName => (
+                      <Option key={amenityName} value={amenityName}>
+                        {amenityName} (Available: {selectedTrainee.amenities[amenityName]?.quantity || 0})
                       </Option>
                     ))}
                   </Select>
